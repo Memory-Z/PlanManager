@@ -72,7 +72,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupObservers() {
         disposables.add(
             intentSubject
-                .concatMap { intent -> processor.process(intent, currentState) }
+                .concatMap { intent -> processor.process(intent, currentState).toObservable() }
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe { state -> render(state) }
         )
