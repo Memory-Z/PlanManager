@@ -1,22 +1,21 @@
 package com.planmanager.view
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.planmanager.R
-import com.planmanager.databinding.ActivityMainBinding
+import com.planmanager.databinding.ActivityListBinding
 import com.planmanager.intent.PlanIntent
-import com.planmanager.model.Plan
 import com.planmanager.processor.PlanProcessor
 import com.planmanager.repository.PlanRepository
 import com.planmanager.state.PlanState
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.subjects.PublishSubject
-import java.util.Date
 
-class MainActivity : AppCompatActivity() {
-    private lateinit var binding: ActivityMainBinding
+class ListActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityListBinding
     private lateinit var adapter: PlanAdapter
 
     private val intentSubject = PublishSubject.create<PlanIntent>()
@@ -28,10 +27,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
+        binding = ActivityListBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         repository = PlanRepository(this)
         processor = PlanProcessor(repository)
@@ -42,14 +39,9 @@ class MainActivity : AppCompatActivity() {
         loadPlans()
     }
 
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
-    }
-
     private fun initViews() {
-        binding.btnAddPlan.setOnClickListener {
-            addPlan()
+        binding.fabAdd.setOnClickListener {
+            startActivity(Intent(this, MainActivity::class.java))
         }
     }
 
@@ -72,10 +64,7 @@ class MainActivity : AppCompatActivity() {
             intentSubject
                 .concatMap { intent -> processor.process(intent, currentState).toObservable() }
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                    { state -> render(state) },
-                    { error -> Toast.makeText(this, "错误: ${error.message}", Toast.LENGTH_SHORT).show() }
-                )
+                .subscribe { state -> render(state) }
         )
     }
 
@@ -83,40 +72,14 @@ class MainActivity : AppCompatActivity() {
         intentSubject.onNext(PlanIntent.LoadPlans)
     }
 
-    private fun addPlan() {
-        val title = binding.etTitle.text.toString().trim()
-        val description = binding.etDescription.text.toString().trim()
-
-        if (title.isEmpty()) {
-            Toast.makeText(this, "请输入计划标题", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val plan = Plan(
-            title = title,
-            description = description,
-            startTime = Date(),
-            endTime = Date(),
-            isCompleted = false
-        )
-        intentSubject.onNext(PlanIntent.AddPlan(plan))
-
-        // 清空输入框
-        binding.etTitle.text.clear()
-        binding.etDescription.text.clear()
-    }
-
     private fun render(state: PlanState) {
         currentState = state
 
         if (state.isLoading) {
-            // 显示加载状态
             Toast.makeText(this, "加载中...", Toast.LENGTH_SHORT).show()
         } else if (state.error != null) {
-            // 显示错误信息
             Toast.makeText(this, "错误: ${state.error}", Toast.LENGTH_SHORT).show()
         } else {
-            // 更新列表
             adapter.updatePlans(state.plans)
         }
     }

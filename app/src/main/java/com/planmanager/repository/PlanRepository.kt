@@ -39,6 +39,10 @@ class PlanRepository(context: Context) {
                 },
                 {
                     future.completeExceptionally(it)
+                },
+                {
+                    // Maybe completed without emitting a value
+                    future.completeExceptionally(Exception("Failed to insert plan"))
                 }
             )
         return future

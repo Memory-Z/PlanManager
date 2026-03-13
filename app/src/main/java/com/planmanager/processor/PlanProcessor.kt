@@ -31,7 +31,7 @@ class PlanProcessor(private val repository: PlanRepository) {
     private fun addPlan(intent: PlanIntent.AddPlan, currentState: PlanState): Flowable<PlanState> {
         return Observable.fromFuture(repository.addPlan(intent.plan))
             .toFlowable(BackpressureStrategy.BUFFER)
-            .flatMap { repository.getPlans().take(1) }
+            .flatMap { repository.getPlans().take(1).defaultIfEmpty(emptyList()) }
             .map { plans -> currentState.copy(isLoading = false, plans = plans, error = null) }
             .onErrorReturn { error -> currentState.copy(isLoading = false, error = error.message) }
             .startWithItem(currentState.copy(isLoading = true))
